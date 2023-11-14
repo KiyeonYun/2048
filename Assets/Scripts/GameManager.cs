@@ -1,24 +1,23 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System;
 
 public class GameManager : MonoBehaviour
 {
     public GameObject[] numbers = new GameObject[17];
 
-    int x, y;
-    bool wait;
+    int x, y, i, j;
+    bool wait, move;
     Vector3 firstPos, gap;
     GameObject[,] Square = new GameObject[4, 4];
-
-    Animator anim;
 
     private void Start()
     {
         numbers = Resources.LoadAll("Prefabs", typeof(GameObject)).Cast<GameObject>().ToArray();
         Debug.Log("numbers: " + numbers.Length);
-
-        anim = GetComponent<Animator>();
+        SortNumbers();
 
         Spawn();
         Spawn();
@@ -54,23 +53,50 @@ public class GameManager : MonoBehaviour
                 {
                     // Up
                     Debug.Log("Up");
+                    for (x = 0; x <= 3; x++)
+                        for (y = 0; y <= 2; y++)
+                            for (i = 3; i >= y + 1; i--)
+                                MoveOrCombine(x, i - 1, x, i);
                 }
                 else if (gap.y < 0f && gap.x > -0.5f && gap.x < 0.5f)
                 {
                     // Down
                     Debug.Log("Down");
+                    for (x = 0; x <= 3; x++)
+                        for (y = 3; y >= 1; y--)
+                            for (i = 0; i <= y - 1; i++)
+                                MoveOrCombine(x, i + 1, x, i);
                 }
                 else if (gap.x > 0f && gap.y > -0.5f && gap.y < 0.5f)
                 {
                     // Right
                     Debug.Log("Right");
+                    for (y = 0; y <= 3; y++)
+                        for (x = 0; x <= 2; x++)
+                            for (i = 3; i >= x + 1; i--)
+                                MoveOrCombine(i - 1, y, i, y);
                 }
                 else if (gap.x < 0f && gap.y > -0.5f && gap.y < 0.5f)
                 {
                     // Left
                     Debug.Log("Left");
+                    for (y = 0; y <= 3; y++)
+                        for (x = 3; x >= 1; x--)
+                            for (i = 0; i <= x - 1; i++)
+                                MoveOrCombine(i + 1, y, i, y);
                 }
                 else return;
+
+                if (move)
+                {
+                    move = false;
+                    Spawn();
+                    for (x = 0; x <= 3; x++)
+                        for (y = 0; y <= 3; y++)
+                            if (Square[x, y] != null)
+                                if (Square[x, y].tag.Contains("Combine"))
+                                    Square[x, y].tag = "Untagged";
+                }
             }
         }
         else if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved)
@@ -88,12 +114,64 @@ public class GameManager : MonoBehaviour
             
     }
 
+    void SortNumbers()
+    {
+        for (int i = 0; i < numbers.Length - 1; i++)
+        {
+            for (int j = i + 1; j < numbers.Length; j++)
+            {
+                if (Int32.Parse(Regex.Replace(numbers[i].name, @"\D", "")) > 
+                    Int32.Parse(Regex.Replace(numbers[j].name, @"\D", "")))
+                {
+                    GameObject tempNum = numbers[j];
+                    numbers[j] = numbers[i];
+                    numbers[i] = tempNum;
+                }
+            }
+        }
+    }
+
+    /* [x1, y1]: 이동 전 좌표
+     * [x2, y2]: 이동할 좌표
+     */
+    void MoveOrCombine(int x1, int y1, int x2, int y2)
+    {
+        /* 이동 전 좌표에 값이 존재하고 이동할 좌표에 값이 없으면 이동 */
+        if (Square[x2, y2] == null && Square[x1, y1] != null)
+        {
+            move = true;
+            Square[x1, y1].GetComponent<Moving>().Move(x2, y2, false);
+            Square[x2, y2] = Square[x1, y1];
+            Square[x1, y1] = null;
+        }
+        /* 같은 숫자일 때 결합 */
+        else if (Square[x1, y1] != null && Square[x2, y2] != null
+            && Square[x1, y1].name == Square[x2, y2].name
+            && !Square[x1, y1].tag.Contains("Combine") && !Square[x2, y2].tag.Contains("Combine"))
+        {
+            move = true;
+            for (j = 0; j <= 16; j++)
+                if (Square[x2, y2].name == numbers[j].name + "(Clone)") break;
+
+            Square[x1, y1].GetComponent<Moving>().Move(x2, y2, true);
+            Destroy(Square[x2, y2]);
+            Square[x1, y1] = null;
+            Square[x2, y2] = Instantiate(
+                numbers[j + 1],
+                new Vector3(x2 * 1.2f + -1.8f, y2 * 1.2f + -1.8f, 0),
+                Quaternion.identity
+                );
+            Square[x2, y2].tag = "Combine";
+            Square[x2, y2].GetComponent<Animator>().SetTrigger("Combine");
+        }
+    }
+
     void Spawn()
     {
         while (true)
         {
-            x = Random.Range(0, 4);
-            y = Random.Range(0, 4);
+            x = UnityEngine.Random.Range(0, 4);
+            y = UnityEngine.Random.Range(0, 4);
             if (Square[x, y] == null)
                 break;
         }
@@ -101,7 +179,7 @@ public class GameManager : MonoBehaviour
 
         // 1/8 확률로 4를 스폰, 나머지는 2를 스폰
         Square[x, y] = Instantiate(
-            Random.Range(0, 8) > 0 ? numbers[0] : numbers[1],
+            UnityEngine.Random.Range(0, 8) > 0 ? numbers[0] : numbers[1],
             new Vector3(x * 1.2f + -1.8f, y * 1.2f + -1.8f, 0),
             Quaternion.identity
             );
