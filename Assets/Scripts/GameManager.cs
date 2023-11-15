@@ -7,9 +7,11 @@ using System;
 public class GameManager : MonoBehaviour
 {
     public GameObject[] numbers = new GameObject[17];
+    GameObject quitUI;
 
-    int x, y, i, j;
-    bool wait, move;
+    int x, y;
+    int i, j, k, l;  // k: 빈칸의 개수
+    bool wait, move, isGameOver;
     Vector3 firstPos, gap;
     GameObject[,] Square = new GameObject[4, 4];
 
@@ -19,6 +21,9 @@ public class GameManager : MonoBehaviour
         Debug.Log("numbers: " + numbers.Length);
         SortNumbers();
 
+        quitUI = GameObject.Find("Quit");
+        quitUI.SetActive(false);
+
         Spawn();
         Spawn();
     }
@@ -27,6 +32,8 @@ public class GameManager : MonoBehaviour
     {
         /* 뒤로가기 */
         if (Input.GetKeyDown(KeyCode.Escape)) Application.Quit();
+
+        if (isGameOver) return;
 
         /* 모바일과 PC에서 모두 동작하도록 */
         if (Input.GetMouseButtonDown(0))
@@ -91,11 +98,37 @@ public class GameManager : MonoBehaviour
                 {
                     move = false;
                     Spawn();
+                    k = 0;
+                    l = 0;
                     for (x = 0; x <= 3; x++)
                         for (y = 0; y <= 3; y++)
-                            if (Square[x, y] != null)
-                                if (Square[x, y].tag.Contains("Combine"))
-                                    Square[x, y].tag = "Untagged";
+                        {
+                            if (Square[x, y] == null)
+                            {
+                                k++;
+                                continue;
+                            }
+                            if (Square[x, y].tag.Contains("Combine")) Square[x, y].tag = "Untagged";
+                        }
+                    // Debug.Log("Empty Square: " + k);
+                    if (k <= 0)
+                    {
+                        // 인접해있는 같은 숫자가 없다면 게임 오버
+                        for (y = 0; y <= 3; y++)
+                            for (x = 0; x < 2; x++)
+                                if (Square[x, y].name.Equals(Square[x + 1, y].name)) l++;
+                        for (x = 0; x <= 3; x++)
+                            for (y = 0; y <= 2; y++)
+                                if (Square[x, y].name.Equals(Square[x, y + 1].name)) l++;
+                        // Debug.Log("Same Square: " + l);
+
+                        if (l <= 0)
+                        {
+                            isGameOver = true;
+                            quitUI.SetActive(true);
+                            return;
+                        }
+                    }
                 }
             }
         }
