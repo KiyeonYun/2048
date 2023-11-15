@@ -650,7 +650,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.45098042, g: 0.427451, b: 0.38823533, a: 1}
+  m_Color: {r: 0.45098042, g: 0.427451, b: 0.38823533, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -795,6 +795,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numbers: []
+  scoreTxt: {fileID: 2025038212}
+  bestScoreTxt: {fileID: 1188037218}
+  plusTxt: {fileID: 1592095657}
 --- !u!1 &1774825804
 GameObject:
   m_ObjectHideFlags: 0

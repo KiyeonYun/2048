@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
@@ -8,9 +9,11 @@ public class GameManager : MonoBehaviour
 {
     public GameObject[] numbers = new GameObject[17];
     GameObject quitUI;
+    [SerializeField] Text scoreTxt, bestScoreTxt, plusTxt;
 
     int x, y;
     int i, j, k, l;  // k: 빈칸의 개수
+    int score;
     bool wait, move, isGameOver;
     Vector3 firstPos, gap;
     GameObject[,] Square = new GameObject[4, 4];
@@ -23,6 +26,7 @@ public class GameManager : MonoBehaviour
 
         quitUI = GameObject.Find("Quit");
         quitUI.SetActive(false);
+        bestScoreTxt.text = PlayerPrefs.GetInt("BestScore").ToString();
 
         Spawn();
         Spawn();
@@ -35,7 +39,7 @@ public class GameManager : MonoBehaviour
 
         if (isGameOver) return;
 
-        /* 모바일과 PC에서 모두 동작하도록 */
+        /* 모바일과 PC에서 드래그 감지 */
         if (Input.GetMouseButtonDown(0))
         {
             firstPos = Input.mousePosition;
@@ -100,6 +104,9 @@ public class GameManager : MonoBehaviour
                     Spawn();
                     k = 0;
                     l = 0;
+
+                    UpdateScore();
+
                     for (x = 0; x <= 3; x++)
                         for (y = 0; y <= 3; y++)
                         {
@@ -113,16 +120,7 @@ public class GameManager : MonoBehaviour
                     // Debug.Log("Empty Square: " + k);
                     if (k <= 0)
                     {
-                        // 인접해있는 같은 숫자가 없다면 게임 오버
-                        for (y = 0; y <= 3; y++)
-                            for (x = 0; x < 2; x++)
-                                if (Square[x, y].name.Equals(Square[x + 1, y].name)) l++;
-                        for (x = 0; x <= 3; x++)
-                            for (y = 0; y <= 2; y++)
-                                if (Square[x, y].name.Equals(Square[x, y + 1].name)) l++;
-                        // Debug.Log("Same Square: " + l);
-
-                        if (l <= 0)
+                        if (CheckSameNumberOnBorder())
                         {
                             isGameOver = true;
                             quitUI.SetActive(true);
@@ -144,7 +142,6 @@ public class GameManager : MonoBehaviour
                 Debug.Log(gap);
             }
         }
-            
     }
 
     void SortNumbers()
@@ -196,9 +193,12 @@ public class GameManager : MonoBehaviour
                 );
             Square[x2, y2].tag = "Combine";
             Square[x2, y2].GetComponent<Animator>().SetTrigger("Combine");
+            score += (int)Mathf.Pow(2, j + 2);
+            // scoreTxt.text = score.ToString();
         }
     }
 
+    /* 새 숫자 생성 */
     void Spawn()
     {
         while (true)
@@ -219,6 +219,37 @@ public class GameManager : MonoBehaviour
 
         Square[x, y].GetComponent<Animator>().SetTrigger("Spawn");
 
+    }
+
+    void UpdateScore()
+    {
+        if (score > 0)
+        {
+            plusTxt.text = "+" + score.ToString() + "    ";
+            plusTxt.GetComponent<Animator>().SetTrigger("PlusBack");
+            plusTxt.GetComponent<Animator>().SetTrigger("Plus");
+            scoreTxt.text = (int.Parse(scoreTxt.text) + score).ToString();
+            if (PlayerPrefs.GetInt("BestScore", 0) < int.Parse(scoreTxt.text))
+            {
+                PlayerPrefs.SetInt("BestScore", int.Parse(scoreTxt.text));
+            }
+            bestScoreTxt.text = PlayerPrefs.GetInt("BestScore").ToString();
+            score = 0;
+        }
+    }
+
+    bool CheckSameNumberOnBorder()
+    {
+        for (y = 0; y <= 3; y++)
+            for (x = 0; x < 2; x++)
+                if (Square[x, y].name.Equals(Square[x + 1, y].name)) l++;
+        for (x = 0; x <= 3; x++)
+            for (y = 0; y <= 2; y++)
+                if (Square[x, y].name.Equals(Square[x, y + 1].name)) l++;
+        // Debug.Log("Same Square: " + l);
+
+        if (l <= 0) return true;
+        else return false;
     }
 
     /* 게임 재시작 */
